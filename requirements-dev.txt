@@ -1,0 +1,11 @@
+-r requirements.txt
+pytest==8.3.3
+# Redis в памяти процесса для тестов rate limiting и кеша.
+# lupa — Lua в fakeredis: redis-py снимает блокировку Lua-скриптом.
+fakeredis[lua]==2.23.5
+lupa==2.2
+# Генерация кода из proto/delivery.proto (и проверка, что он не устарел, — tests/test_proto.py).
+grpcio-tools==1.75.1
+
+# Временный PostgreSQL для тестов ЛР10.
+testcontainers==4.14.2

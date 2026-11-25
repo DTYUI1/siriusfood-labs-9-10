@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+# Предупреждения из закреплённых в requirements.txt версий библиотек.
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::DeprecationWarning:httpx.*",
+    "ignore::DeprecationWarning:passlib.*",
+    "ignore::PendingDeprecationWarning:starlette.*",
+]

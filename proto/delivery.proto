@@ -1,0 +1,131 @@
+// Контракт микросервиса доставки «Сириус.Еды» — единый источник правды
+// для сервера (delivery_service/) и клиента в монолите (app/modules/delivery/grpc_client.py).
+//
+// Генерация кода (из корня проекта):
+//   python -m grpc_tools.protoc -Iproto --python_out=. --pyi_out=. --grpc_python_out=. proto/delivery.proto
+//
+// Ошибки возвращаются статусами gRPC, текст — в details:
+//   NOT_FOUND            — заказ, курьер или доставка не найдены;
+//   FAILED_PRECONDITION  — нарушено правило (заказ не оплачен, доставка уже завершена…);
+//   PERMISSION_DENIED    — курьер заблокирован, пользователь не участник чата;
+//   UNAUTHENTICATED      — вызов без служебного токена.
+// Каждый вызов несёт метаданные authorization: Bearer <DELIVERY_GRPC_TOKEN>.
+
+syntax = "proto3";
+
+package delivery;
+
+import "google/protobuf/timestamp.proto";
+
+service DeliveryService {
+  // Назначение курьера на оплаченный заказ.
+  rpc AssignCourier(AssignCourierRequest) returns (AssignCourierResponse);
+  // Курьер забрал заказ: in_progress → on_the_way.
+  rpc PickUpOrder(PickUpOrderRequest) returns (PickUpOrderResponse);
+  // Завершение доставки: → completed, заказ → delivered.
+  rpc CompleteDelivery(CompleteDeliveryRequest) returns (CompleteDeliveryResponse);
+  // Информация о доставке.
+  rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);
+  // Доставки курьера.
+  rpc ListCourierDeliveries(ListCourierDeliveriesRequest) returns (ListCourierDeliveriesResponse);
+  // Admin-only HTTP facade checks actor role before this service-token RPC.
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
+
+  // Server Streaming: текущий статус сразу, затем каждое изменение.
+  // Поток закрывается сервером, когда доставка завершена или отменена.
+  rpc TrackDelivery(TrackDeliveryRequest) returns (stream DeliveryStatus);
+
+  // Bidirectional Streaming: чат заказчика и курьера по одной доставке.
+  // Доставка и участник передаются в метаданных x-delivery-id и x-user-id.
+  // Сначала приходит история (до 50 сообщений), затем новые сообщения обоих участников.
+  rpc ChatWithCourier(stream ChatMessage) returns (stream ChatMessage);
+}
+
+message Delivery {
+  int32 id = 1;
+  int32 order_id = 2;
+  int32 courier_id = 3;
+  // Владелец заказа: по нему монолит проверяет права на доставку (IDOR).
+  int32 customer_id = 4;
+  string status = 5;
+}
+
+// --- AssignCourier ---
+message AssignCourierRequest {
+  int32 order_id = 1;
+  int32 courier_id = 2;
+}
+
+message AssignCourierResponse {
+  int32 delivery_id = 1;
+  string status = 2;
+}
+
+// --- PickUpOrder ---
+message PickUpOrderRequest {
+  int32 delivery_id = 1;
+}
+
+message PickUpOrderResponse {
+  string status = 1;
+}
+
+// --- CompleteDelivery ---
+message CompleteDeliveryRequest {
+  int32 delivery_id = 1;
+}
+
+message CompleteDeliveryResponse {
+  string status = 1;
+}
+
+// --- GetDelivery ---
+message GetDeliveryRequest {
+  int32 delivery_id = 1;
+}
+
+message GetDeliveryResponse {
+  Delivery delivery = 1;
+}
+
+// --- ListCourierDeliveries ---
+message ListCourierDeliveriesRequest {
+  int32 courier_id = 1;
+}
+
+message ListCourierDeliveriesResponse {
+  repeated Delivery deliveries = 1;
+}
+
+message ListDeliveriesRequest {
+  int32 offset = 1;
+  int32 limit = 2;
+}
+
+message ListDeliveriesResponse {
+  repeated Delivery deliveries = 1;
+}
+
+// --- TrackDelivery ---
+message TrackDeliveryRequest {
+  int32 delivery_id = 1;
+}
+
+message DeliveryStatus {
+  int32 delivery_id = 1;
+  string status = 2;
+  // Когда сервер увидел этот статус.
+  google.protobuf.Timestamp observed_at = 3;
+  // true — статус конечный, после него поток закрывается.
+  bool final = 4;
+}
+
+// --- ChatWithCourier ---
+message ChatMessage {
+  // От клиента приходит только text, остальные поля заполняет сервер.
+  string text = 1;
+  int32 sender_id = 2;
+  // customer или courier.
+  string sender_role = 3;
+  google.protobuf.Timestamp sent_at = 4;
+}

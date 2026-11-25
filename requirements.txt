@@ -1,0 +1,33 @@
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+# Bounded HTTP adapters for ES and b.ai; no client-side/provider SDK dependency.
+httpx==0.27.2
+sqlalchemy==2.0.29
+psycopg2-binary==2.9.9
+pydantic[email]==2.6.4
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+# passlib 1.7.4 несовместим с bcrypt >= 4.1 (ошибка самопроверки бэкенда), поэтому bcrypt закреплён.
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+# 3.5.0 вместо 3.3.0 из методички: в 3.3.0 уязвимости CVE-2024-33663 и CVE-2024-33664.
+python-jose[cryptography]==3.5.0
+# Нужен FastAPI для приёма формы логина (кнопка Authorize в Swagger).
+python-multipart==0.0.20
+alembic==1.13.1
+redis==5.0.3
+# Фоновые задачи (лабораторная № 5). kombu и python-dateutil закреплены на версиях,
+# совместимых с Celery 5.4: иначе pip ставит kombu 5.6 и python-dateutil 3.0.
+celery[redis]==5.4.0
+kombu==5.4.2
+python-dateutil==2.9.0.post0
+# Мониторинг задач. Слушает только 127.0.0.1: в аргументах задач есть email и телефоны.
+flower==2.0.1
+# Микросервис доставки (лабораторная № 6). protobuf — рантайм сгенерированных
+# delivery_pb2*.py; grpcio его не тянет, поэтому закреплён явно.
+grpcio==1.75.1
+protobuf==6.33.6
+# RabbitMQ (ЛР7): события, Saga и Transactional Outbox.
+aio-pika==9.5.8
+# RED-метрики приложения (ЛР9).
+prometheus-client==0.21.1
