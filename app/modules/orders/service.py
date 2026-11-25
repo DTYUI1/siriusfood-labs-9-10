@@ -104,8 +104,6 @@ class OrderService:
             raise NotFoundError("Заказ не найден")
         if order.user_id != current_user.id:
             raise AccessDeniedError("Нельзя оплатить чужой заказ")
-        if order.status == "paid":
-            return
         if order.status != STATUS_PROCESSING or not self.repository.pay_order(order_id):
             raise BusinessRuleError("Оплата недоступна в текущем статусе заказа")
 
